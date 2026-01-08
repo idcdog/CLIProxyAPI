@@ -373,15 +373,16 @@ func ConvertOpenAIRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 				hasTool = true
 			}
 		}
-		if hasTool {
-			out, _ = sjson.SetRawBytes(out, "tools", []byte("[]"))
-			out, _ = sjson.SetRawBytes(out, "tools.0", toolNode)
-		}
+	if hasTool {
+		out, _ = sjson.SetRawBytes(out, "tools", []byte("[]"))
+		out, _ = sjson.SetRawBytes(out, "tools.0", toolNode)
 	}
+}
 
-	out = common.AttachDefaultSafetySettings(out, "safetySettings")
+out = common.AttachDefaultSystemInstruction(out)
+out = common.AttachDefaultSafetySettings(out, "safetySettings")
 
-	return out
+return out
 }
 
 // itoa converts int to string without strconv import for few usages.

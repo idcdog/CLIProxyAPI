@@ -19,30 +19,31 @@ import (
 //
 // It keeps the payload otherwise unchanged.
 func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte {
-	rawJSON := bytes.Clone(inputRawJSON)
+	out := bytes.Clone(inputRawJSON)
 	// Fast path: if no contents field, only attach safety settings
-	contents := gjson.GetBytes(rawJSON, "contents")
+	contents := gjson.GetBytes(out, "contents")
 	if !contents.Exists() {
-		return common.AttachDefaultSafetySettings(rawJSON, "safetySettings")
+		out = common.AttachDefaultSystemInstruction(out)
+		return common.AttachDefaultSafetySettings(out, "safetySettings")
 	}
 
-	toolsResult := gjson.GetBytes(rawJSON, "tools")
+	toolsResult := gjson.GetBytes(out, "tools")
 	if toolsResult.Exists() && toolsResult.IsArray() {
 		toolResults := toolsResult.Array()
 		for i := 0; i < len(toolResults); i++ {
-			if gjson.GetBytes(rawJSON, fmt.Sprintf("tools.%d.functionDeclarations", i)).Exists() {
-				strJson, _ := util.RenameKey(string(rawJSON), fmt.Sprintf("tools.%d.functionDeclarations", i), fmt.Sprintf("tools.%d.function_declarations", i))
-				rawJSON = []byte(strJson)
+			if gjson.GetBytes(out, fmt.Sprintf("tools.%d.functionDeclarations", i)).Exists() {
+				strJson, _ := util.RenameKey(string(out), fmt.Sprintf("tools.%d.functionDeclarations", i), fmt.Sprintf("tools.%d.function_declarations", i))
+				out = []byte(strJson)
 			}
 
-			functionDeclarationsResult := gjson.GetBytes(rawJSON, fmt.Sprintf("tools.%d.function_declarations", i))
+			functionDeclarationsResult := gjson.GetBytes(out, fmt.Sprintf("tools.%d.function_declarations", i))
 			if functionDeclarationsResult.Exists() && functionDeclarationsResult.IsArray() {
 				functionDeclarationsResults := functionDeclarationsResult.Array()
 				for j := 0; j < len(functionDeclarationsResults); j++ {
-					parametersResult := gjson.GetBytes(rawJSON, fmt.Sprintf("tools.%d.function_declarations.%d.parameters", i, j))
+					parametersResult := gjson.GetBytes(out, fmt.Sprintf("tools.%d.function_declarations.%d.parameters", i, j))
 					if parametersResult.Exists() {
-						strJson, _ := util.RenameKey(string(rawJSON), fmt.Sprintf("tools.%d.function_declarations.%d.parameters", i, j), fmt.Sprintf("tools.%d.function_declarations.%d.parametersJsonSchema", i, j))
-						rawJSON = []byte(strJson)
+						strJson, _ := util.RenameKey(string(out), fmt.Sprintf("tools.%d.function_declarations.%d.parameters", i, j), fmt.Sprintf("tools.%d.function_declarations.%d.parametersJsonSchema", i, j))
+						out = []byte(strJson)
 					}
 				}
 			}
@@ -50,7 +51,6 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 	}
 
 	// Walk contents and fix roles
-	out := rawJSON
 	prevRole := ""
 	idx := 0
 	contents.ForEach(func(_ gjson.Result, value gjson.Result) bool {
@@ -91,11 +91,12 @@ func ConvertGeminiRequestToGemini(_ string, inputRawJSON []byte, _ bool) []byte 
 		return true
 	})
 
-	if gjson.GetBytes(rawJSON, "generationConfig.responseSchema").Exists() {
+	if gjson.GetBytes(out, "generationConfig.responseSchema").Exists() {
 		strJson, _ := util.RenameKey(string(out), "generationConfig.responseSchema", "generationConfig.responseJsonSchema")
 		out = []byte(strJson)
 	}
 
+	out = common.AttachDefaultSystemInstruction(out)
 	out = common.AttachDefaultSafetySettings(out, "safetySettings")
 	return out
 }

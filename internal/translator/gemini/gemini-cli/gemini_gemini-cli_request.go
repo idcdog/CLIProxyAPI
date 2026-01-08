@@ -60,5 +60,6 @@ func ConvertGeminiCLIRequestToGemini(_ string, inputRawJSON []byte, _ bool) []by
 		return true
 	})
 
+	rawJSON = common.AttachDefaultSystemInstruction(rawJSON)
 	return common.AttachDefaultSafetySettings(rawJSON, "safetySettings")
 }

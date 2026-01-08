@@ -174,6 +174,7 @@ func ConvertClaudeRequestToGemini(modelName string, inputRawJSON []byte, _ bool)
 	}
 
 	result := []byte(out)
+	result = common.AttachDefaultSystemInstruction(result)
 	result = common.AttachDefaultSafetySettings(result, "safetySettings")
 
 	return result
